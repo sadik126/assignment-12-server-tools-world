@@ -37,6 +37,8 @@ async function run() {
     try {
         await client.connect()
         const toolscollection = client.db("products").collection("tools")
+        const bookingcollection = client.db("products").collection("booking")
+        const usercollection = client.db("products").collection("user")
 
         app.get('/tools', async (req, res) => {
             const query = {}
@@ -55,9 +57,30 @@ async function run() {
             res.send(service)
         })
 
+        app.post('/booking', async (req, res) => {
+            const booking = req.body;
+            const query = { name: booking.name, email: booking.email, product: booking.product, phone: booking.phone, price: booking.price, amount: booking.amount }
+            const exists = await bookingcollection.findOne(query)
+            if (exists) {
+                return res.send({ success: false, booking: exists })
+            }
+            const result = await bookingcollection.insertOne(booking)
 
-        app.get('/purchase', async (req, res) => {
+            res.send({ success: true, result });
+        })
 
+
+        app.put('/user/:email', async (req, res) => {
+            const email = req.params.email;
+            const user = req.body;
+            const filter = { email: email };
+            const option = { upsert: true };
+            const updatedDoc = {
+                $set: user,
+            }
+            const result = await usercollection.updateOne(filter, updatedDoc, option)
+            const token = jwt.sign({ email: email }, process.env.ACCESS_TOKEN, { expiresIn: '1h' })
+            res.send({ result, token })
         })
 
     }
